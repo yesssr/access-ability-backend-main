@@ -1,0 +1,40 @@
+{
+  "name": "access-ability-backend",
+  "version": "1.0.0",
+  "description": "ACCESS-ABILITY Backend",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "knex": "knex --knexfile knexfile.js",
+    "migrate:latest": "npm run knex -- migrate:latest",
+    "migrate:rollback": "npm run knex -- migrate:rollback",
+    "seed:run": "npm run knex -- seed:run",
+    "seed:locations": "npm run knex -- seed:run --specific=202604230001_locations_provinces_regencies.js",
+    "test:pending-booking": "node scripts/create_pending_booking.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1035.0",
+    "axios": "^1.15.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "google-auth-library": "^10.6.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1",
+    "objection": "^3.1.5",
+    "pg": "^8.20.0",
+    "uuid": "^11.1.0",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
