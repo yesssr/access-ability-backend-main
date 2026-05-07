@@ -13,7 +13,11 @@ export class User extends BaseModel {
       properties: {
         id: { type: "string", format: "uuid" },
         email: { type: "string", minLength: 5, maxLength: 255 },
-        password_hash: { type: ["string", "null"], minLength: 20, maxLength: 255 },
+        password_hash: {
+          type: ["string", "null"],
+          minLength: 20,
+          maxLength: 255,
+        },
         full_name: { type: "string", minLength: 3, maxLength: 120 },
         phone_number: { type: ["string", "null"], maxLength: 30 },
         role: { type: "string", enum: ["user", "provider", "admin"] },
