@@ -13,7 +13,6 @@ import { ProviderCertification } from "../models/ProviderCertification.js";
 import { ServiceType } from "../models/ServiceType.js";
 import { uploadFileToStorage } from "./storage.service.js";
 import { env } from "../config/env.js";
-import { sendNotificationToUser } from "./push.service.js";
 
 const makeError = (status, message) => {
   const err = new Error(message);

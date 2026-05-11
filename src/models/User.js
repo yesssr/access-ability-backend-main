@@ -1,9 +1,23 @@
+/*
+Tujuan: Mendefinisikan entitas user aplikasi beserta relasi domain lintas modul.
+Caller: service auth/provider/booking/review/matching dan query relasional Objection.
+Dependensi: BaseModel serta model Provider, Booking, Review, BookingStatusHistory, ProviderCertification, AiMatchingLog.
+Main Functions: sanitizeUser, tableName, jsonSchema, relationMappings.
+Side Effects: Validasi struktur data user pada operasi query/insert/update.
+*/
+
 import { BaseModel } from "./BaseModel.js";
 import * as ProviderModel from "./Provider.js";
 
+export const sanitizeUser = (user) => {
+  if (!user) return null;
+  const { password_hash, oauth_token_data, ...safe } = user;
+  return safe;
+};
+
 export class User extends BaseModel {
   static get tableName() {
-    return "users";
+    return this.table("users");
   }
 
   static get jsonSchema() {
@@ -33,13 +47,15 @@ export class User extends BaseModel {
   }
 
   static get relationMappings() {
+    const schema = this.schemaName;
+
     return {
       providerProfile: {
         relation: BaseModel.HasOneRelation,
         modelClass: ProviderModel.Provider,
         join: {
-          from: "users.id",
-          to: "provider_profiles.user_id",
+          from: `${schema}.users.id`,
+          to: `${schema}.provider_profiles.user_id`,
         },
       },
 
@@ -47,8 +63,8 @@ export class User extends BaseModel {
         relation: BaseModel.HasManyRelation,
         modelClass: () => import("./Booking.js").then((m) => m.Booking),
         join: {
-          from: "users.id",
-          to: "bookings.user_id",
+          from: `${schema}.users.id`,
+          to: `${schema}.bookings.user_id`,
         },
       },
 
@@ -56,8 +72,8 @@ export class User extends BaseModel {
         relation: BaseModel.HasManyRelation,
         modelClass: () => import("./Review.js").then((m) => m.Review),
         join: {
-          from: "users.id",
-          to: "reviews.reviewer_user_id",
+          from: `${schema}.users.id`,
+          to: `${schema}.reviews.reviewer_user_id`,
         },
       },
 
@@ -68,8 +84,8 @@ export class User extends BaseModel {
             (m) => m.BookingStatusHistory
           ),
         join: {
-          from: "users.id",
-          to: "booking_status_histories.changed_by",
+          from: `${schema}.users.id`,
+          to: `${schema}.booking_status_histories.changed_by`,
         },
       },
 
@@ -77,8 +93,8 @@ export class User extends BaseModel {
         relation: BaseModel.HasManyRelation,
         modelClass: ProviderModel.Provider,
         join: {
-          from: "users.id",
-          to: "provider_profiles.verified_by",
+          from: `${schema}.users.id`,
+          to: `${schema}.provider_profiles.verified_by`,
         },
       },
 
@@ -89,8 +105,8 @@ export class User extends BaseModel {
             (m) => m.ProviderCertification
           ),
         join: {
-          from: "users.id",
-          to: "provider_certifications.verified_by",
+          from: `${schema}.users.id`,
+          to: `${schema}.provider_certifications.verified_by`,
         },
       },
 
@@ -99,8 +115,8 @@ export class User extends BaseModel {
         modelClass: () =>
           import("./AiMatchingLog.js").then((m) => m.AiMatchingLog),
         join: {
-          from: "users.id",
-          to: "ai_matching_logs.user_id",
+          from: `${schema}.users.id`,
+          to: `${schema}.ai_matching_logs.user_id`,
         },
       },
     };

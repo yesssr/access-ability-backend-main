@@ -230,12 +230,26 @@ export const login = async (req, res, next) => {
       email: user.email,
     });
 
+    // If provider, also fetch provider profile to include verification status
+    let providerProfile = null;
+    if (user.role === "provider") {
+      try {
+        providerProfile = await Provider.query().findOne({ user_id: user.id });
+      } catch (e) {
+        console.error(
+          "[Auth] Failed to fetch providerProfile:",
+          e?.message || e
+        );
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: "Login success",
       data: {
         token,
         user: sanitizeUser(user),
+        providerProfile,
       },
     });
   } catch (err) {

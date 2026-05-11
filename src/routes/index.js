@@ -16,7 +16,6 @@ import bookingRoutes from "./bookings.routes.js";
 import reviewRoutes from "./reviews.routes.js";
 import matchingRoutes from "./matching.routes.js";
 import locationRoutes from "./locations.routes.js";
-import pushRoutes from "./push.routes.js";
 import { getServiceTypes } from "../controllers/provider.controller.js";
 
 const router = Router();
@@ -28,7 +27,6 @@ router.use("/providers", providerRoutes);
 router.use("/users", usersRoutes);
 router.use("/bookings", bookingRoutes);
 router.use("/reviews", reviewRoutes);
-router.use("/push", pushRoutes);
 
 if (env.features.enableAiMatching) {
   router.use("/matching", matchingRoutes);

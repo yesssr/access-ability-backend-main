@@ -17,7 +17,6 @@ import {
   calculateDurationHours,
   calculateTotalPrice,
 } from "../utils/pricing.js";
-import { sendNotificationToUser } from "./push.service.js";
 
 const parseTimeToMinutes = (value) => {
   const [hours, minutes, seconds] = value.split(":").map(Number);
@@ -269,7 +268,10 @@ export const createBooking = async (user, payload) => {
       }
     } catch (err) {
       // Log error tapi jangan interrupt booking flow
-      console.error("[Booking Service] Failed to send notification:", err.message);
+      console.error(
+        "[Booking Service] Failed to send notification:",
+        err.message
+      );
     }
 
     return booking;
@@ -715,7 +717,9 @@ export const updateBookingStatus = async ({
               type: "booking_cancelled",
               booking_id: updatedBooking.id,
               reason: cancelReason,
-              url: `/dashboard/${cancelledByProvider ? "user" : "provider"}/bookings`,
+              url: `/dashboard/${
+                cancelledByProvider ? "user" : "provider"
+              }/bookings`,
             },
           });
         }
