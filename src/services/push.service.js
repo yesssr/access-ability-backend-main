@@ -154,7 +154,7 @@ export const unregisterToken = async (user, token) => {
  */
 export const unregisterAllTokens = async (user) => {
   const userId = getUserId(user);
-  
+
   const count = await DeviceToken.query()
     .patch({ is_active: false })
     .where({ user_id: userId, is_active: true });
@@ -179,8 +179,6 @@ export const cleanupOldInactiveTokens = async (daysRetention = 30) => {
 
   return { deleted: count };
 };
-
-
 
 export const cleanupTokens = async (tokens) => {
   const uniqueTokens = [...new Set(tokens)].filter(Boolean);

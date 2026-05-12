@@ -65,7 +65,6 @@ export const unregisterAllDevices = async (req, res, next) => {
   }
 };
 
-
 export const sendTestNotification = async (req, res, next) => {
   try {
     const result = await sendNotificationToUser(getUserId(req.user), {
