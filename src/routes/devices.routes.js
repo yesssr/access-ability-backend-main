@@ -13,6 +13,7 @@ import {
   registerDevice,
   sendTestNotification,
   unregisterDevice,
+  unregisterAllDevices,
 } from "../controllers/device.controller.js";
 import {
   registerDeviceValidator,
@@ -37,5 +38,6 @@ router.post(
   validate,
   sendTestNotification
 );
+router.post("/unregister-all", unregisterAllDevices);
 
 export default router;
