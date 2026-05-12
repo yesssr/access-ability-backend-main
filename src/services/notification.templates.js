@@ -198,14 +198,16 @@ export const buildBookingCancelledNotification = ({
   recipientRole,
   cancelReason,
 }) => {
+  const schedule = formatBookingSchedule(booking);
   const cancelledByProvider = recipientRole === "user";
-  const notifMessage = cancelledByProvider
-    ? "Provider membatalkan booking Anda"
-    : "Booking Anda telah dibatalkan";
+  const title = cancelledByProvider ? "Booking ditolak" : "Booking dibatalkan";
+  const body = cancelledByProvider
+    ? `Provider membatalkan booking ${schedule}.`
+    : `Pemesan membatalkan booking ${schedule}.`;
 
   return buildPushPayload({
-    title: "Booking dibatalkan",
-    body: notifMessage + (cancelReason ? `: ${cancelReason}` : ""),
+    title,
+    body: body + (cancelReason ? ` Alasan: ${cancelReason}` : ""),
     tag: "booking-cancelled",
     url: `/dashboard/${recipientRole}/bookings`,
     data: {
