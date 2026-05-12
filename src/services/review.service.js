@@ -1,15 +1,17 @@
 /*
 Tujuan: Mengelola review booking dan query review untuk user/provider dashboard.
 Caller: review.controller serta booking flow saat review dibuat.
-Dependensi: Booking, Provider, Review, dan raw aggregate Objection.
+Dependensi: Booking, Provider, Review, raw aggregate Objection, push.service, notification.templates.
 Main Functions: createReview, getProviderReviews, getMyReviews.
-Side Effects: Insert review, hitung ulang rating provider, dan filter akses berbasis role.
+Side Effects: Insert review, hitung ulang rating provider, kirim FCM review_created ke provider pasca-commit, dan filter akses berbasis role.
 */
 
 import { raw } from "objection";
 import { Booking } from "../models/Booking.js";
 import { Provider } from "../models/Provider.js";
 import { Review } from "../models/Review.js";
+import { buildReviewCreatedNotification } from "./notification.templates.js";
+import { sendNotificationToUser } from "./push.service.js";
 
 const makeError = (status, message) => {
   const err = new Error(message);
@@ -58,7 +60,9 @@ export const createReview = async (user, payload) => {
   }
 
   return Review.transaction(async (trx) => {
-    const booking = await Booking.query(trx).findById(payload.booking_id);
+    const booking = await Booking.query(trx)
+      .findById(payload.booking_id)
+      .withGraphFetched("providerProfile");
     if (!booking) {
       throw makeError(404, "Booking not found");
     }
@@ -92,6 +96,23 @@ export const createReview = async (user, payload) => {
     });
 
     await recalculateProviderRating(trx, booking.provider_profile_id);
+
+    return { review, booking };
+  }).then(async ({ review, booking }) => {
+    try {
+      const providerUserId = booking.providerProfile?.user_id;
+      if (providerUserId) {
+        await sendNotificationToUser(
+          providerUserId,
+          buildReviewCreatedNotification({ review, booking })
+        );
+      }
+    } catch (err) {
+      console.error(
+        "[Review Service] Failed to send review notification:",
+        err.message
+      );
+    }
 
     return review;
   });
