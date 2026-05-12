@@ -10,6 +10,7 @@ import {
   registerToken,
   sendNotificationToUser,
   unregisterToken,
+  unregisterAllTokens,
 } from "../services/push.service.js";
 
 const getUserId = (user) => user?.sub || user?.id;
@@ -40,6 +41,23 @@ export const unregisterDevice = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Device token unregistered",
+      data: result,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+/**
+ * Unregister all device tokens for authenticated user (logout flow)
+ * Deactivate semua active tokens user saat logout
+ */
+export const unregisterAllDevices = async (req, res, next) => {
+  try {
+    const result = await unregisterAllTokens(req.user);
+    return res.status(200).json({
+      success: true,
+      message: "All device tokens unregistered",
       data: result,
     });
   } catch (err) {

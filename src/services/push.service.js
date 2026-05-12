@@ -146,6 +146,40 @@ export const unregisterToken = async (user, token) => {
   return { deactivated: true };
 };
 
+/**
+ * Deactivate all active device tokens for a user (on logout)
+ * Tujuan: Clear all push subscriptions untuk user saat logout
+ * @param user - User object with id/sub
+ * @returns Jumlah tokens yang di-deactivate
+ */
+export const unregisterAllTokens = async (user) => {
+  const userId = getUserId(user);
+
+  const count = await DeviceToken.query()
+    .patch({ is_active: false })
+    .where({ user_id: userId, is_active: true });
+
+  return { deactivated: count };
+};
+
+/**
+ * Periodic cleanup: hard-delete old inactive device tokens (retention: 30 days default)
+ * Tujuan: Prevent DB accumulation of soft-deleted tokens
+ * @param daysRetention - Number of days to retain inactive tokens before hard delete (default: 30)
+ * @returns Jumlah tokens yang dihapus
+ */
+export const cleanupOldInactiveTokens = async (daysRetention = 30) => {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysRetention);
+
+  const count = await DeviceToken.query()
+    .del()
+    .where({ is_active: false })
+    .andWhere("last_seen_at", "<", cutoffDate.toISOString());
+
+  return { deleted: count };
+};
+
 export const cleanupTokens = async (tokens) => {
   const uniqueTokens = [...new Set(tokens)].filter(Boolean);
   if (uniqueTokens.length === 0) {
