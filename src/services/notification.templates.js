@@ -8,7 +8,9 @@ Side Effects: Tidak ada. Modul ini murni builder data.
 
 const compactObject = (value) => {
   return Object.fromEntries(
-    Object.entries(value).filter(([, item]) => item !== undefined && item !== null)
+    Object.entries(value).filter(
+      ([, item]) => item !== undefined && item !== null
+    )
   );
 };
 

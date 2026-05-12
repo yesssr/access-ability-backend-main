@@ -342,9 +342,11 @@ export const googleCallback = async (req, res, next) => {
     }
 
     // Redirect ke frontend page yang melakukan exchange code ke backend.
-    const frontendRedirectUrl = `${env.frontend.baseUrl}/auth/google/callback?code=${encodeURIComponent(
-      code
-    )}${state ? `&state=${encodeURIComponent(state)}` : ""}`;
+    const frontendRedirectUrl = `${
+      env.frontend.baseUrl
+    }/auth/google/callback?code=${encodeURIComponent(code)}${
+      state ? `&state=${encodeURIComponent(state)}` : ""
+    }`;
 
     return res.redirect(frontendRedirectUrl);
   } catch (err) {
