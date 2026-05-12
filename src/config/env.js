@@ -2,13 +2,44 @@
 Tujuan: Memusatkan konfigurasi environment aplikasi.
 Caller: bootstrap app, middleware, service, dan route composition.
 Dependensi: dotenv dan environment variables proses runtime.
-Main Functions: export object env untuk konfigurasi DB, JWT, bcrypt, rate limit, dan feature flags.
+Main Functions: export object env untuk konfigurasi DB, JWT, bcrypt, Firebase/FCM, rate limit, dan feature flags.
 Side Effects: Memuat file .env ke process.env saat startup.
 */
 
 import dotenv from "dotenv";
 
 dotenv.config();
+
+const parseFirebaseServiceAccount = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  try {
+    const decodedValue = Buffer.from(trimmedValue, "base64").toString("utf8");
+    return JSON.parse(decodedValue);
+  } catch {
+    try {
+      return JSON.parse(trimmedValue);
+    } catch {
+      return null;
+    }
+  }
+};
+
+const firebaseServiceAccount = parseFirebaseServiceAccount(
+  process.env.FIREBASE_SERVICE_ACCOUNT
+);
+
+const hasFirebaseCredentials = Boolean(
+  process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    firebaseServiceAccount ||
+    (process.env.FIREBASE_PROJECT_ID &&
+      process.env.FIREBASE_CLIENT_EMAIL &&
+      process.env.FIREBASE_PRIVATE_KEY)
+);
 
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
@@ -58,6 +89,15 @@ export const env = {
     },
   },
 
+  firebase: {
+    enabled: process.env.FIREBASE_ENABLED === "true" || hasFirebaseCredentials,
+    projectId: process.env.FIREBASE_PROJECT_ID || "",
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "",
+    privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    serviceAccount: firebaseServiceAccount,
+    applicationCredentials: process.env.GOOGLE_APPLICATION_CREDENTIALS || "",
+  },
+
   rateLimit: {
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000),
     max: Number(process.env.RATE_LIMIT_MAX || 100),
@@ -72,6 +112,6 @@ export const env = {
   },
 
   frontend: {
-    baseUrl: process.env.FRONTEND_BASE_URL || "http://localhost:3000",
+    baseUrl: process.env.FRONTEND_BASE_URL || "http://localhost:3001",
   },
 };

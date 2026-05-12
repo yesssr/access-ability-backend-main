@@ -5,6 +5,7 @@ import {
   me,
   googleAuthUrl,
   googleCallback,
+  googleCallbackExchange,
   googleMobileToken,
 } from "../controllers/auth.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
@@ -34,6 +35,7 @@ router.get("/me", authenticate, me);
 // OAuth Google (Web Flow)
 router.get("/google/url", googleAuthUrl);
 router.get("/google/callback", googleCallback);
+router.post("/google/callback", googleCallbackExchange);
 
 // OAuth Google (Mobile Flow)
 router.post(

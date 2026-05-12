@@ -341,13 +341,43 @@ export const googleCallback = async (req, res, next) => {
       res.clearCookie("oauth_state");
     }
 
-    const result = await handleGoogleCallback(code);
-
-    // Redirect ke frontend dengan token (query param atau fragment)
-    // Fragment (#) lebih aman untuk token dibanding query (untuk history)
-    const frontendRedirectUrl = `${env.frontend.baseUrl}/auth/callback?token=${result.accessToken}&email=${result.user.email}`;
+    // Redirect ke frontend page yang melakukan exchange code ke backend.
+    const frontendRedirectUrl = `${env.frontend.baseUrl}/auth/google/callback?code=${encodeURIComponent(
+      code
+    )}${state ? `&state=${encodeURIComponent(state)}` : ""}`;
 
     return res.redirect(frontendRedirectUrl);
+  } catch (err) {
+    return next(err);
+  }
+};
+
+/**
+ * POST /auth/google/callback - Exchange Google authorization code from frontend callback page
+ * Body: { code }
+ */
+export const googleCallbackExchange = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: "Authorization code is required",
+      });
+    }
+
+    const result = await handleGoogleCallback(code);
+
+    return res.status(200).json({
+      success: true,
+      message: "Google OAuth authentication success",
+      data: {
+        token: result.accessToken,
+        user: result.user,
+        providerProfile: result.providerProfile ?? null,
+      },
+    });
   } catch (err) {
     return next(err);
   }

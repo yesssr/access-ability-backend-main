@@ -1,9 +1,9 @@
 /*
 Tujuan: Menjalankan use case domain provider (listing, profil, spesialisasi, availability, verifikasi, push notifikasi).
 Caller: controller provider.
-Dependensi: model Provider, ProviderSpecialization, ProviderAvailability, ServiceType, push.service.
-Main Functions: listProviders, getProviderDetail, getMyProviderProfile, updateMyProviderProfile, upsertMySpecializations, removeMySpecialization, createMyAvailability, updateMyAvailability, deleteMyAvailability, verifyCertification.
-Side Effects: DB read/write pada provider_profiles, provider_specializations, provider_availabilities, push_subscriptions. Push notifications dikirim ke provider saat sertifikat diverifikasi.
+Dependensi: model Provider, ProviderSpecialization, ProviderAvailability, ServiceType, push.service, notification.templates.
+Main Functions: listProviders, getProviderDetail, getMyProviderProfile, updateMyProviderProfile, upsertMySpecializations, removeMySpecialization, createMyAvailability, updateMyAvailability, deleteMyAvailability, verifyProviderProfile, verifyCertification.
+Side Effects: DB read/write pada provider_profiles, provider_specializations, provider_availabilities, device_tokens. Push notifications FCM dikirim ke provider saat provider disetujui dan saat sertifikat diverifikasi.
 */
 
 import { Provider } from "../models/Provider.js";
@@ -13,6 +13,11 @@ import { ProviderCertification } from "../models/ProviderCertification.js";
 import { ServiceType } from "../models/ServiceType.js";
 import { uploadFileToStorage } from "./storage.service.js";
 import { env } from "../config/env.js";
+import { sendNotificationToUser } from "./push.service.js";
+import {
+  buildCertificationVerificationNotification,
+  buildProviderVerificationNotification,
+} from "./notification.templates.js";
 
 const makeError = (status, message) => {
   const err = new Error(message);
@@ -640,12 +645,29 @@ export const verifyProviderProfile = async (
   const verificationStatus = payload.verification_status;
   const isVerified = verificationStatus === "approved";
 
-  return Provider.query().patchAndFetchById(providerId, {
+  const updatedProvider = await Provider.query().patchAndFetchById(providerId, {
     verification_status: verificationStatus,
     is_verified: isVerified,
     verified_by: adminUserId,
     verified_at: new Date().toISOString(),
   });
+
+  if (!provider.is_verified && isVerified && provider.user_id) {
+    try {
+      await sendNotificationToUser(
+        provider.user_id,
+        buildProviderVerificationNotification({ providerId })
+      );
+    } catch (err) {
+      // Log error tapi jangan interrupt verification flow
+      console.error(
+        "[Provider Service] Failed to send provider verification notification:",
+        err.message
+      );
+    }
+  }
+
+  return updatedProvider;
 };
 
 export const listServiceTypes = async () => {
@@ -687,24 +709,14 @@ export const verifyCertification = async (
   try {
     const providerUserId = cert.providerProfile?.user_id;
     if (providerUserId) {
-      const statusText = isApproved ? "Disetujui ✅" : "Ditolak ❌";
-      const messageBody = isApproved
-        ? `Sertifikat untuk "${cert.certification_name}" telah diverifikasi dan disetujui!`
-        : `Sertifikat untuk "${cert.certification_name}" tidak berhasil verifikasi. Silakan cek kembali dokumen Anda.`;
-
-      await sendNotificationToUser(providerUserId, {
-        title: `📋 Sertifikat ${statusText}`,
-        body: messageBody,
-        icon: "/favicon.ico",
-        badge: "/favicon.ico",
-        tag: `certification-${certificationId}`,
-        data: {
-          type: isApproved ? "verification_approved" : "verification_rejected",
-          certification_id: certificationId,
-          certification_name: cert.certification_name,
-          url: "/dashboard/provider/profil",
-        },
-      });
+      await sendNotificationToUser(
+        providerUserId,
+        buildCertificationVerificationNotification({
+          certificationId,
+          certificationName: cert.certification_name,
+          isApproved,
+        })
+      );
     }
   } catch (err) {
     // Log error tapi jangan interrupt verification

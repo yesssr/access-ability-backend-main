@@ -3,7 +3,7 @@ Tujuan: Menangani booking lifecycle dan query dashboard booking user/provider.
 Caller: booking.controller untuk create, list me, detail, status update, dan history.
 Dependensi: Booking, BookingStatusHistory, Provider, ProviderAvailability, ProviderSpecialization, pricing utils, push.service.
 Main Functions: createBooking, getMyBookings, getBookingDetail, updateBookingStatus, getBookingHistory.
-Side Effects: Insert booking/status history, validasi slot provider, send push notification ke provider, dan pembatasan akses berbasis role.
+Side Effects: Insert/update booking/status history, validasi slot provider, send FCM notification pasca-commit, dan pembatasan akses berbasis role.
 */
 
 import { Booking } from "../models/Booking.js";
@@ -17,6 +17,14 @@ import {
   calculateDurationHours,
   calculateTotalPrice,
 } from "../utils/pricing.js";
+import { sendNotificationToUser } from "./push.service.js";
+import {
+  buildBookingAcceptedNotification,
+  buildBookingCancelledNotification,
+  buildBookingCompletedNotification,
+  buildBookingCreatedNotification,
+  buildBookingSubmittedNotification,
+} from "./notification.templates.js";
 
 const parseTimeToMinutes = (value) => {
   const [hours, minutes, seconds] = value.split(":").map(Number);
@@ -249,23 +257,28 @@ export const createBooking = async (user, payload) => {
 
     return booking;
   }).then(async (booking) => {
-    // Send push notification to provider about new booking
+    // Send push notifications after booking is committed
     try {
       const providerUserId = provider.user_id;
+      const notifications = [];
+
       if (providerUserId) {
-        await sendNotificationToUser(providerUserId, {
-          title: "📅 Booking Baru!",
-          body: `Ada booking baru pada ${booking.booking_date} jam ${booking.start_time}-${booking.end_time}`,
-          icon: "/favicon.ico",
-          badge: "/favicon.ico",
-          tag: "booking-new",
-          data: {
-            type: "booking_created",
-            booking_id: booking.id,
-            url: `/dashboard/provider/permintaan-booking`,
-          },
-        });
+        notifications.push(
+          sendNotificationToUser(
+            providerUserId,
+            buildBookingCreatedNotification({ booking })
+          )
+        );
       }
+
+      notifications.push(
+        sendNotificationToUser(
+          userId,
+          buildBookingSubmittedNotification({ booking })
+        )
+      );
+
+      await Promise.all(notifications);
     } catch (err) {
       // Log error tapi jangan interrupt booking flow
       console.error(
@@ -613,7 +626,7 @@ export const updateBookingStatus = async ({
         notes: "Booking accepted by provider",
       });
 
-      return updated;
+      return { updatedBooking: updated, previousBooking: booking };
     }
 
     if (targetStatus === "completed") {
@@ -638,7 +651,7 @@ export const updateBookingStatus = async ({
         notes: "Booking completed by provider",
       });
 
-      return updated;
+      return { updatedBooking: updated, previousBooking: booking };
     }
 
     if (targetStatus === "cancelled") {
@@ -672,71 +685,44 @@ export const updateBookingStatus = async ({
         notes: cancelReason || "Booking cancelled",
       });
 
-      return updated;
+      return { updatedBooking: updated, previousBooking: booking };
     }
 
     throw makeError(400, "Unsupported status transition");
-  }).then(async (updatedBooking) => {
+  }).then(async ({ updatedBooking, previousBooking }) => {
     // Send push notifications for status changes
     try {
       if (targetStatus === "accepted") {
         // Notify user that provider accepted booking
-        await sendNotificationToUser(updatedBooking.user_id, {
-          title: "✅ Booking Diterima!",
-          body: `Provider telah menerima booking Anda untuk ${updatedBooking.booking_date}`,
-          icon: "/favicon.ico",
-          badge: "/favicon.ico",
-          tag: "booking-accepted",
-          data: {
-            type: "booking_accepted",
-            booking_id: updatedBooking.id,
-            url: `/dashboard/user/booking/${updatedBooking.id}`,
-          },
-        });
+        await sendNotificationToUser(
+          updatedBooking.user_id,
+          buildBookingAcceptedNotification({ booking: updatedBooking })
+        );
       } else if (targetStatus === "cancelled") {
         // Notify relevant party about cancellation
         const cancelledByProvider =
           user.role === "provider" ||
-          booking.providerProfile?.user_id === userId;
+          previousBooking.providerProfile?.user_id === userId;
         const recipientUserId = cancelledByProvider
           ? updatedBooking.user_id
-          : booking.providerProfile?.user_id;
+          : previousBooking.providerProfile?.user_id;
 
         if (recipientUserId) {
-          const notifMessage = cancelledByProvider
-            ? "Provider membatalkan booking Anda"
-            : "Booking Anda telah dibatalkan";
-
-          await sendNotificationToUser(recipientUserId, {
-            title: "❌ Booking Dibatalkan",
-            body: notifMessage + (cancelReason ? `: ${cancelReason}` : ""),
-            icon: "/favicon.ico",
-            badge: "/favicon.ico",
-            tag: "booking-cancelled",
-            data: {
-              type: "booking_cancelled",
-              booking_id: updatedBooking.id,
-              reason: cancelReason,
-              url: `/dashboard/${
-                cancelledByProvider ? "user" : "provider"
-              }/bookings`,
-            },
-          });
+          await sendNotificationToUser(
+            recipientUserId,
+            buildBookingCancelledNotification({
+              booking: updatedBooking,
+              recipientRole: cancelledByProvider ? "user" : "provider",
+              cancelReason,
+            })
+          );
         }
       } else if (targetStatus === "completed") {
         // Notify user that booking is completed
-        await sendNotificationToUser(updatedBooking.user_id, {
-          title: "🎉 Booking Selesai",
-          body: `Booking untuk ${updatedBooking.booking_date} telah diselesaikan`,
-          icon: "/favicon.ico",
-          badge: "/favicon.ico",
-          tag: "booking-completed",
-          data: {
-            type: "booking_completed",
-            booking_id: updatedBooking.id,
-            url: `/dashboard/user/booking/${updatedBooking.id}`,
-          },
-        });
+        await sendNotificationToUser(
+          updatedBooking.user_id,
+          buildBookingCompletedNotification({ booking: updatedBooking })
+        );
       }
     } catch (err) {
       // Log error tapi jangan interrupt status update

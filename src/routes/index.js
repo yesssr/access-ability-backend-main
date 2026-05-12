@@ -3,7 +3,7 @@ Tujuan: Mendaftarkan seluruh endpoint API v1 dan mengatur aktivasi fitur berbasi
 Caller: src/app.js saat mount router utama /api/v1.
 Dependensi: router domain route modules dan konfigurasi env.
 Main Functions: export default router.
-Side Effects: Mengaktifkan/menonaktifkan akses endpoint tertentu (contoh: matching) sesuai feature flag.
+Side Effects: Mengaktifkan/menonaktifkan akses endpoint tertentu dan mount device notification endpoint.
 */
 
 import { Router } from "express";
@@ -16,6 +16,7 @@ import bookingRoutes from "./bookings.routes.js";
 import reviewRoutes from "./reviews.routes.js";
 import matchingRoutes from "./matching.routes.js";
 import locationRoutes from "./locations.routes.js";
+import deviceRoutes from "./devices.routes.js";
 import { getServiceTypes } from "../controllers/provider.controller.js";
 
 const router = Router();
@@ -40,5 +41,6 @@ if (env.features.enableAiMatching) {
 }
 
 router.use("/locations", locationRoutes);
+router.use("/devices", deviceRoutes);
 
 export default router;
