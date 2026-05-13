@@ -112,6 +112,6 @@ export const env = {
   },
 
   frontend: {
-    baseUrl: process.env.FRONTEND_BASE_URL || "http://localhost:3001",
+    baseUrl: process.env.FRONTEND_BASE_URL || "http://localhost:3000",
   },
 };
