@@ -250,8 +250,8 @@ export const buildCertificationVerificationNotification = ({
   return buildPushPayload({
     title: `Sertifikat ${statusText}`,
     body: isApproved
-      ? `Sertifikat untuk "${certificationName}" telah diverifikasi dan disetujui!`
-      : `Sertifikat untuk "${certificationName}" tidak berhasil verifikasi. Silakan cek kembali dokumen Anda.`,
+      ? `Sertifikat telah diverifikasi dan disetujui!`
+      : `Sertifikat tidak berhasil verifikasi. Silakan cek kembali dokumen Anda.`,
     tag: `certification-${certificationId}`,
     url: "/dashboard/provider/profil",
     data: {
